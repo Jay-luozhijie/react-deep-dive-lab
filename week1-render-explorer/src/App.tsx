@@ -5,7 +5,7 @@ import NormalChild from './components/NormalChild'
 import MemoChild from './components/MemoChild'
 import TextInputPanel from './components/TextInputPanel'
 import HeavyList from './components/HeavyList'
-
+console.log('hello')
 function App() {
   const [showHeavyList, setShowHeavyList] = useState(false)
   const [dynamicProps, setDynamicProps] = useState(false)
@@ -160,10 +160,9 @@ function App() {
         <div className="flex gap-3 flex-wrap">
           {showCounterPanel && <CounterPanel />}
           {showNormalChild && <NormalChild />}
-          {showMemoChild && <MemoChild />}
           {showTextInput && <TextInputPanel />}
           {showHeavyList && <HeavyList />}
-          <MemoChild label={dynamicProps ? String(parentCount) : 'normal-static'} />
+          {showMemoChild && <MemoChild label={dynamicProps ? String(parentCount) : 'normal-static'} />}
         </div>
       </div>
     </div>

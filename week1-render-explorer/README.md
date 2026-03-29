@@ -1,73 +1,83 @@
-# React + TypeScript + Vite
+# React Render Explorer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A hands-on project to explore and understand React's rendering mechanism through interactive examples.
 
-Currently, two official plugins are available:
+## 🚀 Getting Started
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cd week1-render-explorer
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 📋 Project Structure
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### App.tsx (Parent Component)
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+**Controller Section:**
+- **Toggle Controls**: Show/hide Counter Panel, Normal Child, Memo Child, Text Input, Heavy List
+- **Dynamic Props Toggle**: Controls whether MemoChild receives dynamic or static props
+- **Parent State**: 
+  - `parentRenderCount` (useRef): Tracks renders without triggering re-renders
+  - `parentStateCount` (useState): State counter that triggers re-renders
+- **Actions**: "Update Parent" button (increments state) and "Reset" button
+
+### Child Components
+
+#### 1. **CounterPanel**
+Tests the scope of renders. When only this child updates its internal state, the parent and other siblings do **not** re-render—only CounterPanel itself renders.
+
+**Features:**
+- Render counter (useRef)
+- Internal state counter (useState)
+- Update State button
+- Reset Local button
+
+#### 2. **NormalChild**
+Demonstrates default React behavior: re-renders **every time** the parent updates, since it's not memoized.
+
+#### 3. **MemoChild** (React.memo)
+Optimization showcase: only re-renders when:
+- Props change (e.g., `label` prop updates)
+- Internal state changes (e.g., "Update Internal State" button clicked)
+
+**Does NOT re-render** when:
+- Parent re-renders but props remain the same
+- Dynamic Props toggle is OFF (passes static 'normal-static' string)
+
+**Key Code:**
+```jsx
+{showMemoChild && <MemoChild label={dynamicProps ? String(parentCount) : 'normal-static'} />}
 ```
+
+**Important:** When `showMemoChild` toggles from `true` → `false` → `true`, MemoChild is **unmounted** then **remounted** as a new component instance. All internal state is destroyed and reset.
+
+#### 4. **TextInputPanel**
+Demonstrates instantaneous updates in React. Every keystroke triggers an immediate re-render.
+
+#### 5. **HeavyList**
+Simulates heavy computational load by rendering 100000 list items. When enabled, parent updates become noticeably slower, demonstrating performance impact.
+
+## 🔑 Key Concepts Demonstrated
+
+### Render vs. Re-render vs. Unmount
+
+- **Render**: Component function executes and returns JSX
+- **Re-render**: Component updates while staying mounted (state preserved)
+- **Unmount**: Component removed from React tree (state destroyed)
+
+### useRef vs. useState
+
+- **useRef**: Changes don't trigger re-renders (good for tracking)
+- **useState**: Changes trigger re-renders (updates UI)
+
+**Example:** After clicking "Reset" in CounterPanel, the ref value becomes 0, but without a state update, no re-render occurs. The display still shows the old render count until the next re-render is triggered by a state change.
+
+### Component Lifecycle
+
+Components unmount when:
+- Conditional rendering removes them: `{show && <Component />}`
+- The `key` prop changes: `<Component key={id} />` (when `id` changes, React unmounts the old component and mounts a new one)
+- Position in component tree changes
+- Parent component unmounts
+
