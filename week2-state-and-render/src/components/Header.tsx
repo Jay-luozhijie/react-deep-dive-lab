@@ -1,0 +1,32 @@
+import { Link } from 'react-router-dom'
+
+function Header() {
+  return (
+    <nav className="bg-white border-b border-gray-200 px-4 py-3">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex gap-4">
+          <Link
+            to="/"
+            className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded"
+          >
+            Home
+          </Link>
+          <Link
+            to="/state-batching"
+            className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded"
+          >
+            State Batching
+          </Link>
+          <Link
+            to="/state-snapshot-closure"
+            className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded"
+          >
+            State Snapshot & Closure
+          </Link>
+        </div>
+      </div>
+    </nav>
+  )
+}
+
+export default Header
