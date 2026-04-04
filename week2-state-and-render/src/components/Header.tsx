@@ -23,6 +23,18 @@ function Header() {
           >
             State Snapshot & Closure
           </Link>
+          <Link
+            to="/hooks-mechanism"
+            className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded"
+          >
+            Hooks Mechanism
+          </Link>
+          <Link
+            to="/diff-and-reconciliation"
+            className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded"
+          >
+            Diff & Reconciliation
+          </Link>
         </div>
       </div>
     </nav>
