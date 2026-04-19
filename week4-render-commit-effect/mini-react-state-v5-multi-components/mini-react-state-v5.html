@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <div id="root">
+
+  </div>
+
+  <script type="module">
+    const root = document.getElementById('root')
+
+    let currentHook = 0
+    let queue = []
+    let isRendering = false
+    let componentHooksMap = new Map() // component id -> hooks array
+    let currentComponent = null
+    let renderPath = []
+
+    function createElement(type, props, ...children) {
+        return { 
+            type, 
+            props: { ...props } ?? {},
+            children: children.flat()
+        }
+    }
+
+    function scheduleRender(){
+        if (!isRendering) {
+            isRendering = true
+            Promise.resolve().then(() =>{
+                queue.forEach(fn => fn())
+                queue = []
+                render()
+                isRendering = false
+            })
+        }
+    }
+
+    function renderToDom(vdom, index = 0) {
+        if (typeof vdom === 'string' || typeof vdom === 'number') {
+            return document.createTextNode(vdom)
+        }
+
+        if (vdom.type instanceof Function) {
+            let id = vdom.props?.key
+                    ? `${vdom.type.name}-${vdom.props.key}`
+                    : `${vdom.type.name}-${[...renderPath, index].join('.')}`
+            console.log('Rendering component', vdom.type.name, 'with id', id)
+            
+            if (!componentHooksMap.has(id)) {
+            componentHooksMap.set(id, [])
+            }
+            currentComponent = id
+            currentHook = 0
+            renderPath.push(index)
+            const childVdom = vdom.type(vdom.props)
+            renderPath.pop()
+            return renderToDom(childVdom)
+        }
+
+        const dom = document.createElement(vdom.type)
+
+        vdom.props && Object.entries(vdom.props).forEach(([key, value]) => {
+            if (key.startsWith('on')) {
+            const eventType = key.slice(2).toLowerCase()
+            dom.addEventListener(eventType, value)
+            } else {
+            dom.setAttribute(key, value)
+            }
+        })
+
+        vdom.children.forEach((child, i) => dom.appendChild(renderToDom(child, i)))
+
+        return dom
+    }
+
+    function useState(initialValue) {
+        const id = currentComponent
+        if (!componentHooksMap.has(id)) {
+            componentHooksMap.set(id, [])
+        }
+        const hooks = componentHooksMap.get(id)
+
+        const hookIndex = currentHook
+        hooks[hookIndex] = hooks[hookIndex] ?? initialValue
+        const setState = newValue => {
+            console.log('setState called with', newValue)
+            queue.push(() => {
+                console.log('Updating state at hook index', hookIndex)
+                hooks[hookIndex] = typeof newValue === 'function' ? newValue(hooks[hookIndex]) : newValue
+            })
+            scheduleRender()
+        }
+        currentHook++
+        return [hooks[hookIndex], setState]
+
+    }
+
+    function App() {
+        const [count, setCount] = useState(0)
+        const [name, setName] = useState('Tom')
+
+        return createElement('div', null, 
+                createElement('h1', null, `Count: ${count}`),
+                createElement('button', { onClick: () => setCount(count + 1) }, 'Increment Count'),
+                createElement('h2', null, `Name: ${name}`),
+                createElement('button', { onClick: () => setName(name === 'Tom' ? 'Jerry' : 'Tom') }, 'Toggle Name'),
+                createElement(Counter, { key: 'counter1' }),
+                createElement(Counter, { key: 'counter2' }),
+                createElement(Counter, { key: 'counter3' })
+            )
+    }
+
+    function Counter() {
+        const [count, setCount] = useState(0)
+
+        return createElement('div', null, 
+                createElement('h1', null, `Count: ${count}`),
+                createElement('button', { onClick: () => setCount(count + 1) }, 'Increment Count')
+        )
+    }
+
+    function render() {
+        currentHook = 0 // hook index used for each component starts at 0
+        renderPath = [] // record the render path like  [0, 1, 0] which means the first child of the root, then the second child of that node, then the first child of that node
+        currentComponent = null // let renerToDom set it
+        const rootElement = createElement(App, null)
+        root.innerHTML = ''
+        root.appendChild(renderToDom(rootElement, 0)) //start the actual render 
+    }
+
+    render()
+
+  </script>
+</body>
+</html>

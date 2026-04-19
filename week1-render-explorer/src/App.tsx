@@ -16,6 +16,7 @@ function App() {
   const [showTextInput, setShowTextInput] = useState(true)
   const [toggle, setToggle] = useState(false) // Used to trigger re-render for dynamic props
 
+  console.log('App render')
   const parentRenderCount = useRef(0)
   parentRenderCount.current += 1
 

@@ -4,6 +4,8 @@ import Header from './components/Header'
 import StateSnapshotClosure from './components/StateSnapshotClosure'
 import HooksMechanism from './components/HooksMechanism'
 import DiffAndReconciliation from './components/DiffAndReconciliation'
+import EffectTiming from './components/EffectTiming'
+import AsyncBatching from './components/AsyncBatching'
 
 function AppRouter() {
   return (
@@ -58,6 +60,24 @@ function AppRouter() {
                       Understand React's diffing algorithm and reconciliation process.
                     </p>
                   </Link>
+                  <Link
+                    to="/effect-timing"
+                    className="block p-6 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Effect Timing</h2>
+                    <p className="text-gray-600">
+                      Explore the execution order of useEffect vs useLayoutEffect.
+                    </p>
+                  </Link>
+                  <Link
+                    to="/async-batching"
+                    className="block p-6 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Async Batching</h2>
+                    <p className="text-gray-600">
+                      Mixing functional updates with async operations and stale closures.
+                    </p>
+                  </Link>
                 </div>
               </div>
             }
@@ -66,6 +86,8 @@ function AppRouter() {
           <Route path="/state-snapshot-closure" element={<StateSnapshotClosure />} />
           <Route path="/hooks-mechanism" element={<HooksMechanism />} />
           <Route path="/diff-and-reconciliation" element={<DiffAndReconciliation />} />
+          <Route path="/effect-timing" element={<EffectTiming />} />
+          <Route path="/async-batching" element={<AsyncBatching />} />
         </Routes>
       </div>
     </BrowserRouter>

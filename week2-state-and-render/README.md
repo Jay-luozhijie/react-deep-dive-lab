@@ -237,3 +237,15 @@ Even though the component type is the same, a **key change forces a fresh mount*
 - **StateSnapshotClosure**: Shows how closures capture state snapshots
 - **HooksMechanism**: Demonstrates Rules of Hooks violations
 - **DiffAndReconciliation**: Key prop behavior and reconciliation logic
+
+Phase 5:
+The whole process flow for updating state:
+1. setState, this will add an operation in the queue in Hook.queue.pending
+
+2. let React know need to rerender: scheduleUpdateonFiber this telss react that this fiber need rerender
+
+3. react will schedule the update(maybe combine some)
+
+4. start to render: from the root fiber, depending on the schduler, render the fiber that need update， react  will check if need update for the compoennt, for example if App.tsx has no queue, no update, then skip the render for App.tsx
+
+
