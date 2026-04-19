@@ -1,6 +1,6 @@
 # Week 3: Mini useState Implementation
 
-This project contains 4 progressive versions building toward a real useState implementation.
+This project contains 5 progressive versions building toward a real useState implementation.
 
 ---
 
@@ -10,6 +10,7 @@ This project contains 4 progressive versions building toward a real useState imp
 - [Mini useState Version 2](#mini-usestate-version-2-multiple-hooks-with-index-tracking) - Multiple Hooks with Index Tracking
 - [Mini useState Version 3](#mini-usestate-version-3-update-queue--batching) - Update Queue & Batching
 - [Mini useState Version 4](#mini-usestate-version-4-browser-integration--virtual-dom) - Browser Integration & Virtual DOM
+- [Mini useState Version 5](#mini-usestate-version-5-multiple-components--component-hooks-map) - Multiple Components & Component Hooks Map
 
 ---
 
@@ -297,3 +298,138 @@ render()
 ```
 
 **Flow:** createElement creates the VDOM object → App returns VDOM → render() passes it to renderToDom() → real DOM is generated and appended to root → UI updates on screen.
+
+---
+
+## Mini useState Version 5: Multiple Components & Component Hooks Map
+
+**How it works:**
+
+This version adds support for multiple custom components (e.g., `Counter`). Each component needs its own hooks array, so we introduce a `componentHooksMap` to store hooks for each component instance.
+
+**Key Changes:**
+
+### 1. Global State Variables
+
+```javascript
+let componentHooksMap = new Map()  // component id → hooks array
+let currentComponent = null        // currently rendering component id
+let currentHook = 0               // current hook index within component
+let renderPath = []               // track position in render tree
+```
+
+**Understanding the global variables:**
+
+- **`currentHook`**: Hook index within the current component. Must be reset to `0` before each component renders. This is why in `renderToDom`, when `vdom.type instanceof Function`, we set `currentHook = 0` before calling the component function.
+
+- **`currentComponent`**: The unique ID of the currently rendering component. Set in `renderToDom` before calling the component function, so `useState` knows which component's hooks to access.
+
+- **`renderPath`**: An array like `[0, 1, 0]` tracking the **component hierarchy path**, NOT the full DOM tree path. It only includes custom components (e.g., `Counter`, `App`), not native DOM elements (e.g., `div`, `button`). This keeps the path lean and focused on components that need hooks storage.
+
+  Example: `renderPath = [0, 1, 0]` means:
+  - Index 0: First custom component child of root
+  - Index 1: Second custom component child of that component
+  - Index 0: First custom component child of the leaf
+
+### 2. Component ID Strategy
+
+Each component instance needs a unique ID to store its hooks. The ID is determined by:
+
+- **With key prop:** `ComponentName-${key}` (state follows the key)
+- **Without key:** `ComponentName-${renderPath.join('.')}` (state follows position)
+
+### 3. Enhanced renderToDom
+
+Add a new case for **function-type components**:
+
+```javascript
+function renderToDom(vdom, index = 0) {
+  // ... handle string/number ...
+
+  // NEW: Handle component functions (App, Counter, etc.)
+  if (vdom.type instanceof Function) {
+    // 1. Build unique component ID
+    let id = vdom.props?.key
+      ? `${vdom.type.name}-${vdom.props.key}`
+      : `${vdom.type.name}-${[...renderPath, index].join('.')}`
+    
+    // 2. Initialize hooks array for this component
+    if (!componentHooksMap.has(id)) {
+      componentHooksMap.set(id, [])
+    }
+    
+    // 3. Set context for useState calls
+    currentComponent = id
+    currentHook = 0
+    
+    // 4. Track render path
+    renderPath.push(index)
+    
+    // 5. Call component function to get child VDOM
+    const childVdom = vdom.type(vdom.props)
+    
+    // 6. Restore path
+    renderPath.pop()
+    
+    // 7. Recursively render the child VDOM
+    return renderToDom(childVdom)
+  }
+
+  // ... handle DOM elements ...
+}
+```
+
+### 4. Updated useState
+
+```javascript
+function useState(initialValue) {
+  const id = currentComponent  // Use the current component's ID
+  const hooks = componentHooksMap.get(id)
+  const hookIndex = currentHook
+  
+  hooks[hookIndex] = hooks[hookIndex] ?? initialValue
+  
+  const setState = newValue => {
+    queue.push(() => {
+      hooks[hookIndex] = typeof newValue === 'function' 
+        ? newValue(hooks[hookIndex]) 
+        : newValue
+    })
+    scheduleRender()
+  }
+  
+  currentHook++
+  return [hooks[hookIndex], setState]
+}
+```
+
+### 5. Example with Multiple Components
+
+```javascript
+function Counter({ label }) {
+  const [count, setCount] = useState(0)
+  return createElement('div', null,
+    createElement('h3', null, `${label}: ${count}`),
+    createElement('button', { onclick: () => setCount(c => c + 1) }, '+1')
+  )
+}
+
+function App() {
+  const [name, setName] = useState('Alice')
+  
+  return createElement('div', null,
+    createElement('h1', null, `Hello ${name}`),
+    createElement(Counter, { key: 'counter1', label: 'First' }),
+    createElement(Counter, { key: 'counter2', label: 'Second' }),
+    createElement(Counter, { key: 'counter3', label: 'Third' })
+  )
+}
+```
+
+**Result:** Each `Counter` has its own independent state, stored under different IDs in `componentHooksMap`:
+- `Counter-counter1`
+- `Counter-counter2`
+- `Counter-counter3`
+
+**Key Insight:** The `renderPath` and component ID system allows React to distinguish between different instances of the same component, ensuring each maintains its own state.
+
