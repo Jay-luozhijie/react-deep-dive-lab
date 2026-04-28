@@ -103,10 +103,10 @@
                 createElement('h1', null, `Count: ${count}`),
                 createElement('button', { onClick: () => setCount(count + 1) }, 'Increment Count'),
                 createElement('h2', null, `Name: ${name}`),
-                createElement('button', { onClick: () => setName(name === 'Tom' ? 'Jerry' : 'Tom') }, 'Toggle Name'),
+                createElement('button', { onClick: () => setName(name === 'Tom' ? 'Edison' : 'Tom') }, 'Toggle Name'),
                 createElement(Counter, { key: 'counter1' }),
                 createElement(Counter, { key: 'counter2' }),
-                createElement(Counter, { key: 'counter3' })
+                createElement(Counter, { key: 'counter3' }),
             )
     }
 
@@ -130,6 +130,6 @@
 
     render()
 
-  </script>
+</script>
 </body>
 </html>
