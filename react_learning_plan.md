@@ -2,7 +2,6 @@
 
 ## 📑 Table of Contents
 
-- [Current Status](#current-status)
 - [The Big Picture](#the-big-picture)
 - [Week 1 — React Render Mechanism](#week-1--react-render-mechanism)
 - [Week 2 — State, Snapshots, and Reconciliation](#week-2--state-snapshots-and-reconciliation)
@@ -16,20 +15,6 @@
 - [Week 10-11 — Next.js](#week-10-11--nextjs)
 - [Week 12 — Full Stack Project](#week-12--full-stack-project)
 
----
-
-## Current Status
-
-```
-✅ useState mechanism          hooks linked list, queue, batching, closure
-✅ useReducer                  same as useState with reducer function
-✅ fiber structure             memoizedState, hook linked list per fiber
-✅ reconciliation              key vs index, type change,  state drift
-✅ mini React runtime          createElement, renderToDom, multi-component, key
-✅ React 4-layer architecture  react / reconciler / renderer separation
-✅ dispatcher pattern          dynamic dispatch, why it exists
-✅ scheduler concept           microtask, batching boundary
-```
 
 ---
 
@@ -682,6 +667,99 @@ function DeepChild() {
 }
 ```
 
+### Tools this week
+
+**Zustand**
+- minimal global store — no Provider, no boilerplate
+- read only the slice you need so components don't over-render
+
+```javascript
+import { create } from 'zustand'
+
+const useStore = create((set) => ({
+  todos: [],
+  addTodo: (text) => set(state => ({ todos: [...state.todos, { id: Date.now(), text, done: false }] })),
+  toggle: (id) => set(state => ({
+    todos: state.todos.map(t => t.id === id ? { ...t, done: !t.done } : t)
+  })),
+}))
+
+function TodoItem({ id }) {
+  const todo = useStore(state => state.todos.find(t => t.id === id))  // select only what you need
+  const toggle = useStore(state => state.toggle)
+  return <li onClick={() => toggle(id)}>{todo.text}</li>
+}
+```
+
+**QueryClient + useQuery (TanStack Query)**
+- manages server state: fetching, caching, background refetch, stale time
+- separates server state (fetched data) from client state (UI)
+
+```javascript
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
+
+const queryClient = new QueryClient()
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TodoList />
+    </QueryClientProvider>
+  )
+}
+
+function TodoList() {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['todos'],
+    queryFn: () => fetch('/api/todos').then(r => r.json()),
+  })
+
+  if (isLoading) return <p>loading...</p>
+  if (isError) return <p>error</p>
+  return <ul>{data.map(t => <li key={t.id}>{t.text}</li>)}</ul>
+}
+```
+
+**useMutation**
+- handles write operations: POST / PUT / DELETE
+- invalidates cached queries on success so the UI stays in sync
+
+```javascript
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+
+function AddTodo() {
+  const queryClient = useQueryClient()
+
+  const mutation = useMutation({
+    mutationFn: (text) => fetch('/api/todos', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    }).then(r => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['todos'] })  // refetch list
+    },
+  })
+
+  return (
+    <button onClick={() => mutation.mutate('new todo')}>
+      {mutation.isPending ? 'adding...' : 'add todo'}
+    </button>
+  )
+}
+```
+
+Server state vs client state — the mental model:
+```
+client state   lives in memory, you own it
+               useState, useReducer, Zustand
+               examples: modal open, selected tab, form input
+
+server state   lives on a server, you cache a copy
+               TanStack Query owns the cache
+               examples: todo list, user profile, search results
+               the cache can be stale — Query handles refetch automatically
+```
+
 ### State architecture rules
 
 **Rule 1: state lives in the lowest common ancestor**
@@ -738,6 +816,48 @@ Minimum features:
 
 The UI does not matter. No styling. The goal is making correct state decisions.
 
+### Experiment: pagination with TanStack Query
+
+Build a paginated list that fetches one page at a time. Goal: feel the difference between managing pagination state manually vs letting Query handle it.
+
+```javascript
+function PaginatedList() {
+  const [page, setPage] = useState(1)
+
+  const { data, isPlaceholderData } = useQuery({
+    queryKey: ['items', page],
+    queryFn: () => fetch(`/api/items?page=${page}&limit=10`).then(r => r.json()),
+    placeholderData: keepPreviousData,  // keeps old page visible while new page loads
+  })
+
+  return (
+    <div>
+      <ul>{data?.items.map(item => <li key={item.id}>{item.name}</li>)}</ul>
+      <div>
+        <button onClick={() => setPage(p => p - 1)} disabled={page === 1}>prev</button>
+        <span>page {page} of {data?.totalPages}</span>
+        <button
+          onClick={() => setPage(p => p + 1)}
+          disabled={isPlaceholderData || page === data?.totalPages}
+        >
+          next
+        </button>
+      </div>
+    </div>
+  )
+}
+```
+
+What to observe:
+```
+navigate forward     new page fetches, old data stays visible (no flicker)
+navigate back        instant — page is already in cache
+add a new item       mutation + invalidate → list refetches current page
+change page size     queryKey must include it, or cache returns wrong page
+```
+
+Key insight: `queryKey: ['items', page]` means each page is its own cache entry. Changing `page` triggers a new fetch automatically — you never write fetch logic in a useEffect.
+
 ### Design principles to understand this week
 
 Every React behaviour traces back to one of these:
@@ -776,6 +896,11 @@ renderer is pluggable
 - [ ] Understand why context causes re-renders
 - [ ] Can explain all six design principles from memory
 - [ ] Know when to lift state vs when to use context
+- [ ] Have set up a Zustand store and selected state slices in components
+- [ ] Can distinguish server state from client state and explain why they need different tools
+- [ ] Used QueryClient + useQuery to fetch and cache a list
+- [ ] Used useMutation + invalidateQueries to add/update an item
+- [ ] Built paginated list — each page cached separately, no flicker on navigation
 
 ---
 
